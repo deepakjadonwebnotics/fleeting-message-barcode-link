@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 
 type Message = {
@@ -20,6 +20,32 @@ const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 export const MessageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<Record<string, Message>>({});
+
+  // Load messages from localStorage on component mount
+  useEffect(() => {
+    const storedMessages = localStorage.getItem('secureMessages');
+    if (storedMessages) {
+      try {
+        const parsedMessages = JSON.parse(storedMessages);
+        // Convert string dates back to Date objects
+        const processedMessages: Record<string, Message> = {};
+        Object.keys(parsedMessages).forEach(key => {
+          processedMessages[key] = {
+            ...parsedMessages[key],
+            createdAt: new Date(parsedMessages[key].createdAt)
+          };
+        });
+        setMessages(processedMessages);
+      } catch (error) {
+        console.error('Failed to parse stored messages:', error);
+      }
+    }
+  }, []);
+
+  // Update localStorage whenever messages change
+  useEffect(() => {
+    localStorage.setItem('secureMessages', JSON.stringify(messages));
+  }, [messages]);
 
   const createMessage = (content: string): string => {
     const id = uuidv4();
