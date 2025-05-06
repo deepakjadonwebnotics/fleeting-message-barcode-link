@@ -11,15 +11,40 @@ import { toast } from 'sonner';
 const CreatedMessage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getMessage } = useMessages();
-  const [message, setMessage] = useState(getMessage(id || ''));
+  const [message, setMessage] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const baseUrl = window.location.origin;
   const messageUrl = `${baseUrl}/view/${id}`;
 
   useEffect(() => {
-    if (!id || !message) {
-      setMessage(null);
-    }
-  }, [id, message]);
+    const fetchMessage = async () => {
+      if (!id) {
+        setMessage(null);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const fetchedMessage = await getMessage(id);
+        setMessage(fetchedMessage);
+      } catch (error) {
+        console.error('Failed to fetch message:', error);
+        toast.error('Failed to verify message');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMessage();
+  }, [id, getMessage]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <p>Loading message details...</p>
+      </div>
+    );
+  }
 
   if (!message) {
     return (
@@ -56,7 +81,7 @@ const CreatedMessage: React.FC = () => {
       </div>
       
       <p className="text-gray-600 mb-8">
-        Created a new secret with ID {id.substring(0, 8)}. It can be viewed using the link above.
+        Created a new secret with ID {id?.substring(0, 8)}. It can be viewed using the link above.
       </p>
       
       <div className="mb-8">

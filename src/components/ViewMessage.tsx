@@ -11,37 +11,58 @@ const ViewMessage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { getMessage, markAsViewed } = useMessages();
   const [message, setMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isExpired, setIsExpired] = useState(false);
   const [isProcessed, setIsProcessed] = useState(false);
 
   useEffect(() => {
     if (!id || isProcessed) return;
 
-    const fetchedMessage = getMessage(id);
-    
-    if (!fetchedMessage) {
-      setIsExpired(true);
-      setIsProcessed(true);
-      return;
-    }
+    const fetchMessage = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedMessage = await getMessage(id);
+        
+        if (!fetchedMessage) {
+          setIsExpired(true);
+          setIsProcessed(true);
+          return;
+        }
 
-    if (fetchedMessage.viewed) {
-      setIsExpired(true);
-      setIsProcessed(true);
-      return;
-    }
+        if (fetchedMessage.viewed) {
+          setIsExpired(true);
+          setIsProcessed(true);
+          return;
+        }
 
-    // Set message content
-    setMessage(fetchedMessage.content);
-    
-    // Mark the message as viewed
-    markAsViewed(id);
-    
-    // Show toast notification
-    toast.success("Successfully decrypted and opened the message. This link is now expired.");
-    setIsProcessed(true);
-    
+        // Set message content
+        setMessage(fetchedMessage.content);
+        
+        // Mark the message as viewed
+        await markAsViewed(id);
+        
+        // Show toast notification
+        toast.success("Successfully decrypted and opened the message. This link is now expired.");
+        setIsProcessed(true);
+      } catch (error) {
+        console.error('Error fetching message:', error);
+        setIsExpired(true);
+        toast.error("Failed to load the message.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMessage();
   }, [id, getMessage, markAsViewed, isProcessed]);
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center">
+        <p>Loading message...</p>
+      </div>
+    );
+  }
 
   if (isExpired) {
     return (

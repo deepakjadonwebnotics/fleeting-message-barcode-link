@@ -8,18 +8,27 @@ import { toast } from 'sonner';
 
 const CreateMessage: React.FC = () => {
   const [message, setMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { createMessage } = useMessages();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) {
       toast.error('Please enter a message');
       return;
     }
     
-    const messageId = createMessage(message);
-    navigate(`/created/${messageId}`);
+    setIsLoading(true);
+    try {
+      const messageId = await createMessage(message);
+      navigate(`/created/${messageId}`);
+    } catch (error) {
+      console.error('Failed to create message:', error);
+      toast.error('Failed to create message. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -39,12 +48,19 @@ const CreateMessage: React.FC = () => {
         
         <Button 
           type="submit"
+          disabled={isLoading}
           className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md flex items-center justify-center space-x-2"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          </svg>
-          <span>Create secure link</span>
+          {isLoading ? (
+            <span>Creating...</span>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Create secure link</span>
+            </>
+          )}
         </Button>
       </form>
       

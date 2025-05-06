@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 
 type Message = {
   id: string;
@@ -11,9 +12,9 @@ type Message = {
 
 interface MessageContextType {
   messages: Record<string, Message>;
-  createMessage: (content: string) => string;
-  getMessage: (id: string) => Message | null;
-  markAsViewed: (id: string) => void;
+  createMessage: (content: string) => Promise<string>;
+  getMessage: (id: string) => Promise<Message | null>;
+  markAsViewed: (id: string) => Promise<void>;
 }
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -47,7 +48,7 @@ export const MessageProvider: React.FC<{ children: ReactNode }> = ({ children })
     localStorage.setItem('secureMessages', JSON.stringify(messages));
   }, [messages]);
 
-  const createMessage = (content: string): string => {
+  const createMessage = async (content: string): Promise<string> => {
     const id = uuidv4();
     const newMessage: Message = {
       id,
@@ -56,19 +57,65 @@ export const MessageProvider: React.FC<{ children: ReactNode }> = ({ children })
       createdAt: new Date(),
     };
 
-    setMessages(prev => ({
-      ...prev,
-      [id]: newMessage
-    }));
-
-    return id;
+    try {
+      // Save the message to server
+      await axios.post('/api/messages', { id, content });
+      
+      // Update local state
+      setMessages(prev => ({
+        ...prev,
+        [id]: newMessage
+      }));
+      
+      return id;
+    } catch (error) {
+      console.error('Failed to save message:', error);
+      // Fall back to just updating local state if server request fails
+      setMessages(prev => ({
+        ...prev,
+        [id]: newMessage
+      }));
+      return id;
+    }
   };
 
-  const getMessage = (id: string): Message | null => {
+  const getMessage = async (id: string): Promise<Message | null> => {
+    try {
+      // Try to get from server first
+      const response = await axios.get(`/api/messages/${id}`);
+      if (response.data && response.data.content) {
+        const serverMessage: Message = {
+          id,
+          content: response.data.content,
+          viewed: false, // Since we're accessing it for the first time from server
+          createdAt: new Date()
+        };
+        
+        // Update local state
+        setMessages(prev => ({
+          ...prev,
+          [id]: serverMessage
+        }));
+        
+        return serverMessage;
+      }
+    } catch (error) {
+      console.log('Message not found on server, checking local storage');
+    }
+    
+    // Fall back to local storage
     return messages[id] || null;
   };
 
-  const markAsViewed = (id: string): void => {
+  const markAsViewed = async (id: string): Promise<void> => {
+    try {
+      // Mark as viewed on server
+      await axios.put(`/api/messages/${id}/viewed`);
+    } catch (error) {
+      console.error('Failed to mark message as viewed on server:', error);
+    }
+    
+    // Update local state regardless of server response
     setMessages(prev => {
       if (!prev[id]) return prev;
       return {
