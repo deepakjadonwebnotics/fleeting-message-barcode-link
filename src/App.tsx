@@ -10,6 +10,9 @@ import CreateMessage from "./components/CreateMessage";
 import CreatedMessage from "./components/CreatedMessage";
 import ViewMessage from "./components/ViewMessage";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import Index from "./pages/Index";
 
 const queryClient = new QueryClient();
 
@@ -22,7 +25,9 @@ const App = () => (
         <BrowserRouter>
           <Navbar />
           <Routes>
-            <Route path="/" element={<CreateMessage />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/created/:id" element={<CreatedMessage />} />
             <Route path="/view/:id" element={<ViewMessage />} />
             <Route path="*" element={<NotFound />} />
